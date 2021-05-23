@@ -23,7 +23,7 @@ A password-protected REST API that serves a single file.
 The value of the `Authorization` header should be equal to the upload or download password.
 
 ## Configuration
-There are four values that can be configured: `UploadPassword`, `DownloadPassword`, `FilePath` and `SlackWebhookUrl`. Edit `appsettings.json`, `appsettings.Development.json`, or add an environment variable like `DOTNET_UploadPassword`.
+There are four values that can be configured: `UploadPassword`, `DownloadPassword`, `FilePath` and `SlackWebhookUrls`. Edit `appsettings.json`, `appsettings.Development.json`, or add an environment variable like `DOTNET_UploadPassword`.
 
 ## Security
 The download and upload passwords are stored in plain text on the server. Therefore, construct these passwords by using an application like [key-stretcher](https://github.com/rdragon/key-stretcher).

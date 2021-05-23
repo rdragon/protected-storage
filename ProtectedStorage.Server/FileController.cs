@@ -17,7 +17,7 @@ namespace ProtectedStorage.Server
     [ApiController]
     public class FileController : ControllerBase
     {
-        private static readonly object _lock = new object();
+        private static readonly object _lock = new();
         private static DateTimeOffset? _lastInvalidPasswordTime;
 
         private readonly IConfiguration _configuration;
@@ -32,7 +32,7 @@ namespace ProtectedStorage.Server
         [HttpPut("file")]
         public async Task<IActionResult> PutFile()
         {
-            if (TryAuthenticate(upload: true) is ObjectResult errorResult)
+            if (await TryAuthenticate(upload: true) is ObjectResult errorResult)
             {
                 return errorResult;
             }
@@ -55,15 +55,15 @@ namespace ProtectedStorage.Server
             using var stream = System.IO.File.OpenWrite(filePath);
             await Request.Body.CopyToAsync(stream);
 
-            SendNotification("File has been updated.");
+            await SendNotifications("File has been updated.");
 
             return NoContent();
         }
 
         [HttpGet("file")]
-        public IActionResult GetFile()
+        public async Task<IActionResult> GetFile()
         {
-            if (TryAuthenticate(upload: false) is ObjectResult errorResult)
+            if (await TryAuthenticate(upload: false) is ObjectResult errorResult)
             {
                 return errorResult;
             }
@@ -78,12 +78,12 @@ namespace ProtectedStorage.Server
                 return BadRequest("File not found.");
             }
 
-            SendNotification("Serving file...");
+            await SendNotifications("Serving file...");
 
             return File(System.IO.File.OpenRead(filePath), "application/octet-stream");
         }
 
-        private ObjectResult? TryAuthenticate(bool upload)
+        private async Task<ObjectResult?> TryAuthenticate(bool upload)
         {
             if (!Request.Headers.TryGetValue("Authorization", out var value))
             {
@@ -115,7 +115,7 @@ namespace ProtectedStorage.Server
                     _lastInvalidPasswordTime = DateTimeOffset.Now;
                 }
 
-                SendNotification($"An invalid {(upload ? "upload" : "download")} password has been submitted.");
+                await SendNotifications($"An invalid {(upload ? "upload" : "download")} password has been submitted.");
 
                 return Unauthorized($"Invalid {(upload ? "upload" : "download")} password.");
             }
@@ -139,18 +139,20 @@ namespace ProtectedStorage.Server
             return false;
         }
 
-        private void SendNotification(string message)
+        private async Task SendNotifications(string message)
         {
-            Task.Run(async () =>
+            var urls = _configuration.GetValue<string?>("SlackWebhookUrls");
+
+            if (string.IsNullOrWhiteSpace(urls))
+            {
+                return;
+            }
+
+            foreach (var rawUrl in urls.Split(','))
             {
                 try
                 {
-                    var url = _configuration.GetValue<string?>("SlackWebhookUrl");
-
-                    if (string.IsNullOrWhiteSpace(url))
-                    {
-                        return;
-                    }
+                    var url = rawUrl.Trim();
 
                     var client = new HttpClient();
                     var json = JsonSerializer.Serialize(new
@@ -165,7 +167,7 @@ namespace ProtectedStorage.Server
                 {
                     _logger.LogError(ex, "Could not send notification.");
                 }
-            });
+            }
         }
     }
 }
