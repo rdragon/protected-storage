@@ -2,7 +2,7 @@
 A password-protected REST API that serves a single file.
 
 ## Quick start
-- Install [.NET 5.0 SDK](https://dotnet.microsoft.com/download/dotnet/5.0)
+- Install [.NET 7.0 SDK](https://dotnet.microsoft.com/download/dotnet/7.0)
 - Start the API: `dotnet run -p ProtectedStorage.Server`
 - Upload a file: `dotnet run -p ProtectedStorage.Client -- u http://localhost:5000 README.md`. The default upload password is "upload".
 - Download the uploaded file: `dotnet run -p ProtectedStorage.Client -- d http://localhost:5000 README-1.md`. The default download password is "download".
