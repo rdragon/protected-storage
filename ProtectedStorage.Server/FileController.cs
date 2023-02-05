@@ -77,16 +77,28 @@ public sealed class FileController : ControllerBase
 
     private async Task<ObjectResult?> TryAuthenticate(bool upload)
     {
-        if (!Request.Headers.TryGetValue("Authorization", out var value))
+        if (!Request.Headers.TryGetValue("Authorization", out var providedPassword))
         {
             return Unauthorized("No Authorization header specified.");
         }
 
-        if (!TryGetSetting(upload ? "UploadPassword" : "DownloadPassword", out var password, out var errorResult))
+        if (!TryGetSetting(upload ? "UploadPassword" : "DownloadPassword", out var expectedPassword, out var errorResult))
         {
             return errorResult;
         }
 
+        (errorResult, var sendNotification) = TryAuthenticate(upload, providedPassword == expectedPassword);
+
+        if (sendNotification)
+        {
+            await SendNotifications($"An invalid {(upload ? "upload" : "download")} password has been submitted.");
+        }
+
+        return errorResult;
+    }
+
+    private (ObjectResult? errorResult, bool sendNotification) TryAuthenticate(bool upload, bool isValidPassword)
+    {
         lock (_lock)
         {
             if (_lastInvalidPasswordTime is DateTimeOffset lastTime)
@@ -95,24 +107,19 @@ public sealed class FileController : ControllerBase
 
                 if (timeLeft > TimeSpan.Zero)
                 {
-                    return BadRequest($"Please wait {timeLeft.TotalSeconds} seconds.");
+                    return (BadRequest($"Please wait {timeLeft.TotalSeconds} seconds."), false);
                 }
             }
-        }
 
-        if (value != password)
-        {
-            lock (_lock)
+            if (!isValidPassword)
             {
                 _lastInvalidPasswordTime = DateTimeOffset.Now;
+
+                return (Unauthorized($"Invalid {(upload ? "upload" : "download")} password."), true);
             }
-
-            await SendNotifications($"An invalid {(upload ? "upload" : "download")} password has been submitted.");
-
-            return Unauthorized($"Invalid {(upload ? "upload" : "download")} password.");
         }
 
-        return null;
+        return (null, false);
     }
 
     private bool TryGetSetting(string key, [NotNullWhen(true)] out string? value, [NotNullWhen(false)] out ObjectResult? errorResult)
