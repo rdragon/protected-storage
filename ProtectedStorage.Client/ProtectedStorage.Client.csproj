@@ -5,6 +5,7 @@
     <TargetFramework>net7.0</TargetFramework>
     <AssemblyName>protected-storage-client</AssemblyName>
     <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
 </Project>
