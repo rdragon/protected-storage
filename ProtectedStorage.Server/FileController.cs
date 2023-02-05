@@ -154,9 +154,10 @@ public sealed class FileController : ControllerBase
                 var url = rawUrl.Trim();
 
                 var client = new HttpClient();
+                var app = Request.GetDisplayUrl().Replace("https://", "").Replace(".azurewebsites.net", "").Replace("/file", "");
                 var json = JsonSerializer.Serialize(new
                 {
-                    text = $"{message} IP={Request.HttpContext.Connection.RemoteIpAddress} URL={Request.GetDisplayUrl()}",
+                    text = $"{message} IP={Request.HttpContext.Connection.RemoteIpAddress} APP={app}",
                 });
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
                 var response = await client.PostAsync(url, content);
